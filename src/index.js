@@ -9,6 +9,7 @@ const CLIENT_ID = process.env.SOUNDCLOUD_CLIENT_ID;
 const CLIENT_SECRET = process.env.SOUNDCLOUD_CLIENT_SECRET;
 const REDIRECT_URI = process.env.SOUNDCLOUD_REDIRECT_URI || `http://localhost:${PORT}/auth/callback`;
 const MCP_API_KEY = process.env.MCP_API_KEY;
+const AUTH_SETUP_KEY = process.env.AUTH_SETUP_KEY;
 const AUTH_URL = "https://secure.soundcloud.com/authorize";
 const TOKEN_URL = "https://secure.soundcloud.com/oauth/token";
 const API_URL = "https://api.soundcloud.com";
@@ -105,7 +106,20 @@ async function soundcloud(path, params = {}, { user = false } = {}) {
   catch { throw new Error("SoundCloud returned an unexpected response."); }
 }
 
-app.get("/auth/start", (_req, res) => {
+app.get("/auth/start", (req, res) => {
+  if (!AUTH_SETUP_KEY && process.env.NODE_ENV === "production") {
+    return res.status(503).type("text").send("Set AUTH_SETUP_KEY in the server environment before connecting SoundCloud.");
+  }
+  if (AUTH_SETUP_KEY) {
+    const header = req.headers.authorization || "";
+    const supplied = header.startsWith("Basic ") ? Buffer.from(header.slice(6), "base64").toString("utf8").split(":").slice(1).join(":") : "";
+    const a = Buffer.from(supplied);
+    const b = Buffer.from(AUTH_SETUP_KEY);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+      res.set("WWW-Authenticate", 'Basic realm="SC-gpt SoundCloud setup"');
+      return res.status(401).type("text").send("Authentication required.");
+    }
+  }
   try {
     requireAppCredentials();
     const state = base64url(randomBytes(32));
