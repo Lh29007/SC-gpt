@@ -36,7 +36,7 @@ The callback URL must match exactly in both places. Use the actual public URL sh
 3. Sign in to SoundCloud and approve the app.
 4. You should see **SoundCloud connected!**
 
-The server uses OAuth 2.1 Authorization Code with PKCE and refreshes expiring tokens automatically. Tokens are kept in server memory in this first version. A Render free instance can sleep or restart, which clears the session; if that happens, connect again using `/auth/start`.
+SC-gpt uses SoundCloud's OAuth 2.1 Authorization Code flow with PKCE and refreshes expiring tokens automatically. Tokens are kept in server memory in this first version. A Render free instance can sleep or restart, which clears the session; if that happens, connect again using `/auth/start`.
 
 ## Connect an MCP client
 
