@@ -49,7 +49,7 @@ function requireAppCredentials() {
 }
 
 function base64url(buffer) {
-  return buffer.toString("base64").replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+  return buffer.toString("base64url");
 }
 
 async function tokenRequest(params, basicAuth = false) {
