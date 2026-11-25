@@ -13,7 +13,11 @@ services:
         value: production
       - key: SOUNDCLOUD_CLIENT_ID
         sync: false
-      - key: SOUNDCLOUD_ACCESS_TOKEN
+      - key: SOUNDCLOUD_CLIENT_SECRET
+        sync: false
+      - key: SOUNDCLOUD_REDIRECT_URI
         sync: false
       - key: MCP_API_KEY
+        generateValue: true
+      - key: AUTH_SETUP_KEY
         generateValue: true
