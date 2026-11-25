@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: sc-gpt
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      - key: SOUNDCLOUD_CLIENT_ID
+        sync: false
+      - key: SOUNDCLOUD_ACCESS_TOKEN
+        sync: false
+      - key: MCP_API_KEY
+        generateValue: true
