@@ -1,44 +1,52 @@
 # SC-gpt
 
-A small, **read-only** SoundCloud MCP server intended to let an MCP-compatible assistant search SoundCloud and inspect a connected account's playlists and likes.
+A personal, read-only SoundCloud MCP server for an MCP-compatible assistant.
 
 Unofficial community project. Not affiliated with SoundCloud.
 
-## Current tools
+## Tools
 
-| Tool | Login required? |
+| Tool | What it does |
 | --- | --- |
-| `search_tracks` | No |
-| `search_playlists` | No |
-| `get_playlist` | No (public playlists) |
-| `get_my_playlists` | Yes |
-| `get_my_likes` | Yes |
+| `search_tracks` | Search public SoundCloud tracks |
+| `search_playlists` | Search public playlists |
+| `get_playlist` | Read a public playlist and its tracks |
+| `get_my_playlists` | List playlists from the connected account |
+| `get_my_likes` | List liked tracks from the connected account |
 
-The server does not upload, like, follow, repost, comment, create playlists, or modify your library.
+This first version is read-only. It cannot upload, like, follow, repost, comment, create playlists, or modify your library.
 
 ## Deploy on Render
 
 1. In Render, choose **New > Blueprint** and select `Lh29007/SC-gpt`.
-2. Create a SoundCloud application at <https://soundcloud.com/you/apps> and copy its Client ID.
-3. In the Render service environment, set `SOUNDCLOUD_CLIENT_ID`.
-4. Set `MCP_API_KEY` to a long random secret. The Render blueprint can generate one automatically.
-5. Deploy. Render's health check is `/health`; the MCP endpoint is `/mcp`.
+2. Deploy the service. Render will generate `MCP_API_KEY` and `AUTH_SETUP_KEY`.
+3. Open the service's **Environment** page and set:
+   - `SOUNDCLOUD_CLIENT_ID`
+   - `SOUNDCLOUD_CLIENT_SECRET`
+   - `SOUNDCLOUD_REDIRECT_URI` to `https://YOUR-SERVICE.onrender.com/auth/callback`
+4. Open your SoundCloud app settings at <https://soundcloud.com/you/apps/> and register that exact redirect URI.
+5. Redeploy if Render asks you to.
 
-Keep the service private by treating the MCP API key like a password. Configure your MCP client to send:
+The callback URL must match exactly in both places. Use the actual public URL shown by Render; do not assume the service name is the URL.
 
-```http
-Authorization: Bearer YOUR_MCP_API_KEY
-```
+## Connect your SoundCloud account
 
-Do not put credentials in source code, commits, screenshots, or public issues.
+1. Open `https://YOUR-SERVICE.onrender.com/auth/start` in a browser.
+2. When the browser asks for HTTP Basic Authentication, use any username and the value of `AUTH_SETUP_KEY` as the password.
+3. Sign in to SoundCloud and approve the app.
+4. You should see **SoundCloud connected!**
 
-## SoundCloud account access
+The server uses OAuth 2.1 Authorization Code with PKCE and refreshes expiring tokens automatically. Tokens are kept in server memory in this first version. A Render free instance can sleep or restart, which clears the session; if that happens, connect again using `/auth/start`.
 
-Public search and public playlist reading only need the SoundCloud application Client ID.
+## Connect an MCP client
 
-Your own playlists and likes are private account data. Those tools additionally need a user OAuth access token in the Render environment variable `SOUNDCLOUD_ACCESS_TOKEN`. This first version does **not** implement the browser OAuth flow yet; do not expect private-library tools to work until a token has been obtained through a supported SoundCloud OAuth flow and configured securely.
+- Transport: Streamable HTTP
+- Endpoint: `https://YOUR-SERVICE.onrender.com/mcp`
+- Header: `Authorization: Bearer YOUR_MCP_API_KEY`
 
-Never paste a SoundCloud password, client secret, or access token into a GitHub file or chat. Use Render's Environment settings for secrets.
+Treat both keys as passwords. Never commit them, paste them into public issues, or share screenshots containing them.
+
+MCP client support varies by product and account plan. Hosting this endpoint does not automatically make custom MCP connections available in every ChatGPT plan.
 
 ## Local development
 
@@ -47,32 +55,28 @@ Requires Node.js 22 or newer.
 ```bash
 npm install
 cp .env.example .env
-# Set SOUNDCLOUD_CLIENT_ID in .env
+# Fill in the SoundCloud app credentials and local redirect URI.
 npm start
 ```
 
-The server listens on `http://localhost:3000`. In local development, the API key can be omitted; in production, requests are rejected unless `MCP_API_KEY` is configured.
-
-## MCP client connection
-
-- Transport: Streamable HTTP
-- Endpoint: `https://YOUR-RENDER-SERVICE.onrender.com/mcp`
-- Header: `Authorization: Bearer YOUR_MCP_API_KEY`
-
-MCP client support varies by product and account plan. Hosting this endpoint does not automatically make custom MCP connections available in every ChatGPT plan.
+Register `http://localhost:3000/auth/callback` in your SoundCloud app for local testing. The local MCP endpoint is `http://localhost:3000/mcp`.
 
 ## Environment variables
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `SOUNDCLOUD_CLIENT_ID` | Yes | SoundCloud application Client ID |
-| `SOUNDCLOUD_ACCESS_TOKEN` | For private tools | OAuth access token for the account |
-| `MCP_API_KEY` | Production | Protects the public MCP endpoint |
-| `PORT` | No | HTTP port; Render sets this automatically |
+| Variable | Purpose |
+| --- | --- |
+| `SOUNDCLOUD_CLIENT_ID` | SoundCloud application Client ID |
+| `SOUNDCLOUD_CLIENT_SECRET` | SoundCloud application secret |
+| `SOUNDCLOUD_REDIRECT_URI` | Exact OAuth callback URL registered with SoundCloud |
+| `MCP_API_KEY` | Bearer key required for MCP requests in production |
+| `AUTH_SETUP_KEY` | Password protecting the browser login-start page |
+| `PORT` | HTTP port; Render sets this automatically |
 
-## Limitations
+## Security and limitations
 
-- This is an early read-only MVP.
-- Private account access requires a valid SoundCloud OAuth token.
-- SoundCloud may change API behavior, scopes, or rate limits.
-- A free Render service may sleep when idle and take time to wake up.
+- Keep the Render service and its secrets under your control.
+- The MCP endpoint is protected by a bearer key; the OAuth start page has separate Basic Auth protection.
+- OAuth tokens are memory-only in this MVP. Restarting the service requires reconnecting SoundCloud.
+- The server is read-only by design.
+- SoundCloud API behavior and rate limits may change.
+- Render's free service may sleep when idle and take time to wake up.
